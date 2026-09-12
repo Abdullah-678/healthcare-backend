@@ -1,0 +1,19 @@
+import { Router } from "express";
+import { specialtyRoutes } from "../module/specialty/specialty.routes";
+import { authRoutes } from "../module/auth/auth.routes";
+import { userRoutes } from "../module/user/user.routes";
+import { doctorRoutes } from "../module/doctor/doctor.routes";
+import { AdminRoutes } from "../module/admin/admin.routes";
+import { scheduleRoutes } from "../module/schedule/schedule.route";
+import { DoctorScheduleRoutes } from "../module/doctorSchedule/doctorSchedule.route";
+
+const router = Router();
+router.use("/specialties", specialtyRoutes);
+router.use("/auth", authRoutes);
+router.use("/users", userRoutes);
+router.use("/doctors", doctorRoutes);
+router.use("/admins", AdminRoutes);
+router.use("/schedules", scheduleRoutes);
+router.use("/doctor-schedules", DoctorScheduleRoutes);
+// router.use("/appointments", AppointmentRoutes)
+export const IndexRoutes = router;
