@@ -3,7 +3,6 @@ import status from "http-status";
 import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import { AppointmentService } from "./appointment.service";
-
 import { AppError } from "../../errorHelpers/appError";
 
 const bookAppointment = catchAsync(async (req: Request, res: Response) => {
@@ -87,38 +86,44 @@ const getAllAppointments = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
-// const bookAppointmentWithPayLater = catchAsync(
-//   async (req: Request, res: Response) => {
-//     const payload = req.body;
-//     const user = req.user;
-//     const appointment = await AppointmentService.bookAppointmentWithPayLater(
-//       payload,
-//       user,
-//     );
-//     sendResponse(res, {
-//       success: true,
-//       htttpStatusCode: status.CREATED,
-//       message: "Appointment booked successfully with Pay Later option",
-//       data: appointment,
-//     });
-//   },
-// );
+const bookAppointmentWithPayLater = catchAsync(
+  async (req: Request, res: Response) => {
+    const payload = req.body;
+    const user = req.user;
+    if (!user) {
+      throw new AppError(status.UNAUTHORIZED, "Unauthorized access");
+    }
+    const appointment = await AppointmentService.bookAppointmentWithPayLater(
+      payload,
+      user,
+    );
+    sendResponse(res, {
+      success: true,
+      htttpStatusCode: status.CREATED,
+      message: "Appointment booked successfully with Pay Later option",
+      data: appointment,
+    });
+  },
+);
 
-// const initiatePayment = catchAsync(async (req: Request, res: Response) => {
-//   const appointmentId = req.params.id;
-//   const user = req.user;
-//   const paymentInfo = await AppointmentService.initiatePayment(
-//     appointmentId as string,
-//     user,
-//   );
+const initiatePayment = catchAsync(async (req: Request, res: Response) => {
+  const appointmentId = req.params.id;
+  const user = req.user;
+  if (!user) {
+    throw new AppError(status.UNAUTHORIZED, "Unauthorized access");
+  }
+  const paymentInfo = await AppointmentService.initiatePayment(
+    appointmentId as string,
+    user,
+  );
 
-//   sendResponse(res, {
-//     success: true,
-//     htttpStatusCode: status.OK,
-//     message: "Payment initiated successfully",
-//     data: paymentInfo,
-//   });
-// });
+  sendResponse(res, {
+    success: true,
+    htttpStatusCode: status.OK,
+    message: "Payment initiated successfully",
+    data: paymentInfo,
+  });
+});
 
 export const AppointmentController = {
   bookAppointment,
@@ -126,6 +131,6 @@ export const AppointmentController = {
   changeAppointmentStatus,
   getMySingleAppointment,
   getAllAppointments,
-  // bookAppointmentWithPayLater,
-  // initiatePayment,
+  bookAppointmentWithPayLater,
+  initiatePayment,
 };

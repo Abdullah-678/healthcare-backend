@@ -116,6 +116,20 @@ export const auth = betterAuth({
             },
           });
 
+          if (!user) {
+            console.error(
+              `User with email ${email} not found. Cannot send verification OTP.`,
+            );
+            return;
+          }
+
+          if (user && user.role === Role.SUPERADMIN) {
+            console.log(
+              `User with email ${email} is a super admin. Skipping sending verification OTP.`,
+            );
+            return;
+          }
+
           if (user && !user.emailVerified) {
             sendEmail({
               to: email,
