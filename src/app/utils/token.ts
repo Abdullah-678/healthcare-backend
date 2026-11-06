@@ -3,7 +3,18 @@ import { jwtUtils } from "./jwt";
 import { envVars } from "../../config/env";
 import { Response } from "express";
 import { cookeiUtils } from "./cookie";
-import ms, { StringValue } from "ms";
+
+const authCookieOptions = () => {
+  const secure = envVars.NODE_ENV === "production";
+
+  return {
+    httpOnly: true,
+    secure,
+    sameSite: secure ? ("none" as const) : ("lax" as const),
+    path: "/",
+  };
+};
+
 const getAccessToken = (payload: JwtPayload) => {
   const accessToken = jwtUtils.createToken(
     payload,
@@ -23,35 +34,33 @@ const getRefreshToken = (payload: JwtPayload) => {
 };
 
 const setAccessTokenCookie = (res: Response, token: string) => {
-  // const maxAge = ms(envVars.ACCESS_TOKEN_EXPIRES_IN as StringValue);
   cookeiUtils.setCookie(res, "accessToken", token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    path: "/",
+    ...authCookieOptions(),
     maxAge: 60 * 60 * 24 * 1000,
   });
 };
 const setRefreshToken = (res: Response, token: string) => {
-  // const maxAge = ms(envVars.REFRESH_TOKEN_EXPIRES_IN as StringValue);
   cookeiUtils.setCookie(res, "refreshToken", token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    path: "/",
+    ...authCookieOptions(),
     maxAge: 60 * 60 * 24 * 7 * 1000,
   });
 };
 
 const setBetterAuthSessionCookie = (res: Response, token: string) => {
-  // const maxAge = ms(envVars.REFRESH_TOKEN_EXPIRES_IN as StringValue);
   cookeiUtils.setCookie(res, "better-auth.session_token", token, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-    path: "/",
+    ...authCookieOptions(),
     maxAge: 60 * 60 * 24 * 1000,
   });
+};
+
+const clearAuthCookies = (res: Response) => {
+  for (const name of [
+    "accessToken",
+    "refreshToken",
+    "better-auth.session_token",
+  ]) {
+    cookeiUtils.clearCookie(res, name, authCookieOptions());
+  }
 };
 
 export const tokenUtils = {
@@ -60,4 +69,5 @@ export const tokenUtils = {
   setAccessTokenCookie,
   setRefreshToken,
   setBetterAuthSessionCookie,
+  clearAuthCookies,
 };

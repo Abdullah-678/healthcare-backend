@@ -5,7 +5,6 @@ import { sendResponse } from "../../shared/sendResponse";
 import status from "http-status";
 import { tokenUtils } from "../../utils/token";
 import { AppError } from "../../errorHelpers/appError";
-import { cookeiUtils } from "../../utils/cookie";
 import { email } from "zod";
 import { envVars } from "../../../config/env";
 import { auth } from "../../lib/auth";
@@ -62,8 +61,11 @@ const getMe = catchAsync(async (req: Request, res: Response) => {
 const getNewToken = catchAsync(async (req: Request, res: Response) => {
   const refreshToken = req.cookies.refreshToken;
   const betterAuthSessionToken = req.cookies["better-auth.session_token"];
-  if (!refreshToken) {
-    throw new AppError(status.UNAUTHORIZED, "Refresh token is missing");
+  if (!refreshToken || !betterAuthSessionToken) {
+    throw new AppError(
+      status.UNAUTHORIZED,
+      "Refresh token or session token is missing",
+    );
   }
 
   const result = await authServices.getNewToken(
@@ -74,7 +76,7 @@ const getNewToken = catchAsync(async (req: Request, res: Response) => {
 
   tokenUtils.setAccessTokenCookie(res, accessToken);
   tokenUtils.setRefreshToken(res, newRefreshToken);
-  tokenUtils.setBetterAuthSessionCookie(res, betterAuthSessionToken);
+  tokenUtils.setBetterAuthSessionCookie(res, sessionToken);
 
   sendResponse(res, {
     htttpStatusCode: status.OK,
@@ -110,21 +112,7 @@ const changePassword = catchAsync(async (req: Request, res: Response) => {
 const logout = catchAsync(async (req: Request, res: Response) => {
   const betterAuthSessionToken = req.cookies["better-auth.session_token"];
   const result = await authServices.logoutUser(betterAuthSessionToken);
-  cookeiUtils.clearCookie(res, "accessToken", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-  });
-  cookeiUtils.clearCookie(res, "refreshToken", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-  });
-  cookeiUtils.clearCookie(res, "better-auth.session_token", {
-    httpOnly: true,
-    secure: true,
-    sameSite: "none",
-  });
+  tokenUtils.clearAuthCookies(res);
 
   sendResponse(res, {
     htttpStatusCode: status.OK,

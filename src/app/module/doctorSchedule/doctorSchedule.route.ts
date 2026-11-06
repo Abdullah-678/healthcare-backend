@@ -16,6 +16,11 @@ router.get(
   DoctorScheduleController.getMyDoctorSchedules,
 );
 router.get(
+  "/available/:doctorId",
+  checkAuth(Role.PATIENT),
+  DoctorScheduleController.getAvailableDoctorSchedules,
+);
+router.get(
   "/",
   checkAuth(Role.ADMIN, Role.SUPERADMIN),
   DoctorScheduleController.getAllDoctorSchedules,

@@ -3,9 +3,16 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./prisma";
 import { Role, UserStatus } from "../../generated/prisma/enums";
 import { envVars } from "../../config/env";
-import ms, { StringValue } from "ms";
 import { bearer, emailOTP } from "better-auth/plugins";
 import { sendEmail } from "../utils/email";
+
+const secureCookies = envVars.NODE_ENV === "production";
+const authCookieAttributes = {
+  sameSite: secureCookies ? ("none" as const) : ("lax" as const),
+  secure: secureCookies,
+  httpOnly: true,
+  path: "/",
+};
 
 export const auth = betterAuth({
   baseURL: envVars.BETTER_AUTH_URL,
@@ -76,23 +83,13 @@ export const auth = betterAuth({
   },
   advanced: {
     // disableCSRFCheck: true,
-    useSecureCookies: false,
+    useSecureCookies: secureCookies,
     cookies: {
       state: {
-        attributes: {
-          sameSite: "none",
-          secure: true,
-          httpOnly: true,
-          path: "/",
-        },
+        attributes: authCookieAttributes,
       },
       sessionToken: {
-        attributes: {
-          sameSite: "none",
-          secure: true,
-          httpOnly: true,
-          path: "/",
-        },
+        attributes: authCookieAttributes,
       },
     },
   },

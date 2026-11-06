@@ -3,10 +3,19 @@ import { Role } from "../../../generated/prisma/enums";
 import { checkAuth } from "../../middleware/checkAuth";
 import { validateRequest } from "../../middleware/validateRequest";
 import { AdminController } from "./admin.controller";
-import { updateAdminZodSchema } from "./admin.validation";
+import {
+  createAdminZodSchema,
+  updateAdminZodSchema,
+} from "./admin.validation";
 
 const router = Router();
 
+router.post(
+  "/",
+  checkAuth(Role.SUPERADMIN),
+  validateRequest(createAdminZodSchema),
+  AdminController.createAdmin,
+);
 router.get(
   "/",
   checkAuth(Role.ADMIN, Role.SUPERADMIN),

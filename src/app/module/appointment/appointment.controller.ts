@@ -4,6 +4,10 @@ import { catchAsync } from "../../shared/catchAsync";
 import { sendResponse } from "../../shared/sendResponse";
 import { AppointmentService } from "./appointment.service";
 import { AppError } from "../../errorHelpers/appError";
+import type {
+  IChangeAppointmentStatusPayload,
+  IScheduleAppointmentRequestPayload,
+} from "./appointment.interface";
 
 const bookAppointment = catchAsync(async (req: Request, res: Response) => {
   const payload = req.body;
@@ -37,14 +41,14 @@ const getMyAppointments = catchAsync(async (req: Request, res: Response) => {
 const changeAppointmentStatus = catchAsync(
   async (req: Request, res: Response) => {
     const appointmentId = req.params.id;
-    const payload = req.body;
+    const payload = req.body as IChangeAppointmentStatusPayload;
     const user = req.user;
     if (!user) {
       throw new AppError(status.UNAUTHORIZED, "Unauthorized access");
     }
     const updatedAppointment = await AppointmentService.changeAppointmentStatus(
       appointmentId as string,
-      payload,
+      payload.status,
       user,
     );
     sendResponse(res, {
@@ -52,6 +56,29 @@ const changeAppointmentStatus = catchAsync(
       htttpStatusCode: status.OK,
       message: "Appointment status updated successfully",
       data: updatedAppointment,
+    });
+  },
+);
+
+const scheduleAppointmentRequest = catchAsync(
+  async (req: Request, res: Response) => {
+    const appointmentId = req.params.id;
+    const payload = req.body as IScheduleAppointmentRequestPayload;
+    const user = req.user;
+    if (!user) {
+      throw new AppError(status.UNAUTHORIZED, "Unauthorized access");
+    }
+
+    const appointment = await AppointmentService.scheduleAppointmentRequest(
+      appointmentId as string,
+      payload.scheduleId,
+      user,
+    );
+    sendResponse(res, {
+      success: true,
+      htttpStatusCode: status.OK,
+      message: "Appointment request scheduled successfully",
+      data: appointment,
     });
   },
 );
@@ -125,12 +152,40 @@ const initiatePayment = catchAsync(async (req: Request, res: Response) => {
   });
 });
 
+const getAppointmentPaymentStatus = catchAsync(
+  async (req: Request, res: Response) => {
+    const appointmentId = req.params.id;
+    const user = req.user;
+    if (!user) {
+      throw new AppError(status.UNAUTHORIZED, "Unauthorized access");
+    }
+
+    const paymentStatus =
+      await AppointmentService.getAppointmentPaymentStatus(
+        appointmentId as string,
+        user,
+        typeof req.query.session_id === "string"
+          ? req.query.session_id
+          : undefined,
+      );
+
+    sendResponse(res, {
+      success: true,
+      htttpStatusCode: status.OK,
+      message: "Appointment payment status retrieved successfully",
+      data: paymentStatus,
+    });
+  },
+);
+
 export const AppointmentController = {
   bookAppointment,
   getMyAppointments,
   changeAppointmentStatus,
+  scheduleAppointmentRequest,
   getMySingleAppointment,
   getAllAppointments,
   bookAppointmentWithPayLater,
   initiatePayment,
+  getAppointmentPaymentStatus,
 };

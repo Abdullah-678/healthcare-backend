@@ -8,10 +8,6 @@ const getAllDoctors = async () => {
       specialties: {
         include: {
           specialty: true,
-          specialties: true,
-          appointments: true,
-          reviews: true,
-          prescriptions: true,
         },
       },
     },

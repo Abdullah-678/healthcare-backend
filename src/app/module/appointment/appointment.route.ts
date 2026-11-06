@@ -1,7 +1,9 @@
 import { Router } from "express";
 import { Role } from "../../../generated/prisma/enums";
 import { checkAuth } from "../../middleware/checkAuth";
+import { validateRequest } from "../../middleware/validateRequest";
 import { AppointmentController } from "./appointment.controller";
+import { AppointmentValidation } from "./appointment.validation";
 
 const router = Router();
 
@@ -18,7 +20,14 @@ router.get(
 router.patch(
   "/change-appointment-status/:id",
   checkAuth(Role.PATIENT, Role.DOCTOR, Role.ADMIN, Role.SUPERADMIN),
+  validateRequest(AppointmentValidation.changeAppointmentStatusZodSchema),
   AppointmentController.changeAppointmentStatus,
+);
+router.patch(
+  "/schedule-request/:id",
+  checkAuth(Role.DOCTOR),
+  validateRequest(AppointmentValidation.scheduleAppointmentRequestZodSchema),
+  AppointmentController.scheduleAppointmentRequest,
 );
 router.get(
   "/my-single-appointment/:id",
@@ -39,6 +48,11 @@ router.post(
   "/initiate-payment/:id",
   checkAuth(Role.PATIENT),
   AppointmentController.initiatePayment,
+);
+router.get(
+  "/payment-status/:id",
+  checkAuth(Role.PATIENT),
+  AppointmentController.getAppointmentPaymentStatus,
 );
 
 export const AppointmentRoutes = router;

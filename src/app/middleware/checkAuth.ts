@@ -9,6 +9,7 @@ import { jwtUtils } from "../utils/jwt";
 import { cookeiUtils } from "../utils/cookie";
 import { AppError } from "../errorHelpers/appError";
 import { envVars } from "../../config/env";
+import { auth } from "../lib/auth";
 
 export const checkAuth =
   (...authRoles: Role[]) =>
@@ -21,10 +22,25 @@ export const checkAuth =
       );
 
       if (!sessionToken) {
-        throw new Error("Unauthorized access! No session token provided.");
+        throw new AppError(
+          status.UNAUTHORIZED,
+          "Unauthorized access! No session token provided.",
+        );
       }
 
-      if (sessionToken) {
+      let user;
+
+      // Try Better Auth session first
+      const betterAuthSession = await auth.api.getSession({
+        headers: {
+          Cookie: `better-auth.session_token=${sessionToken}`,
+        },
+      });
+
+      if (betterAuthSession?.user) {
+        user = betterAuthSession.user;
+      } else {
+        // Fallback to Prisma session lookup
         const sessionExists = await prisma.session.findFirst({
           where: {
             token: sessionToken,
@@ -37,65 +53,45 @@ export const checkAuth =
           },
         });
 
-        if (sessionExists && sessionExists.user) {
-          const user = sessionExists.user;
-
-          const now = new Date();
-          const expiresAt = new Date(sessionExists.expiresAt);
-          const createdAt = new Date(sessionExists.createdAt);
-
-          const sessionLifeTime = expiresAt.getTime() - createdAt.getTime();
-          const timeRemaining = expiresAt.getTime() - now.getTime();
-          const percentRemaining = (timeRemaining / sessionLifeTime) * 100;
-
-          if (percentRemaining < 20) {
-            res.setHeader("X-Session-Refresh", "true");
-            res.setHeader("X-Session-Expires-At", expiresAt.toISOString());
-            res.setHeader("X-Time-Remaining", timeRemaining.toString());
-
-            console.log("Session Expiring Soon!!");
-          }
-
-          if (
-            user.status === UserStatus.BLOCKED ||
-            user.status === UserStatus.DELETED
-          ) {
-            throw new AppError(
-              status.UNAUTHORIZED,
-              "Unauthorized access! User is not active.",
-            );
-          }
-
-          if (user.isDeleted) {
-            throw new AppError(
-              status.UNAUTHORIZED,
-              "Unauthorized access! User is deleted.",
-            );
-          }
-
-          if (authRoles.length > 0 && !authRoles.includes(user.role)) {
-            throw new AppError(
-              status.FORBIDDEN,
-              "Forbidden access! You do not have permission to access this resource.",
-            );
-          }
-
-          req.user = {
-            userId: user.id,
-            role: user.role,
-            email: user.email,
-          };
-        }
-
-        const accessToken = cookeiUtils.getCookie(req, "accessToken");
-
-        if (!accessToken) {
+        if (!sessionExists || !sessionExists.user) {
           throw new AppError(
             status.UNAUTHORIZED,
-            "Unauthorized access! No access token provided.",
+            "Unauthorized access! Invalid or expired session.",
           );
         }
+
+        user = sessionExists.user;
       }
+
+      if (
+        user.status === UserStatus.BLOCKED ||
+        user.status === UserStatus.DELETED
+      ) {
+        throw new AppError(
+          status.UNAUTHORIZED,
+          "Unauthorized access! User is not active.",
+        );
+      }
+
+      if (user.isDeleted) {
+        throw new AppError(
+          status.UNAUTHORIZED,
+          "Unauthorized access! User is deleted.",
+        );
+      }
+
+      if (authRoles.length > 0 && !authRoles.includes(user.role as Role)) {
+        throw new AppError(
+          status.FORBIDDEN,
+          "Forbidden access! You do not have permission to access this resource.",
+        );
+      }
+
+      req.user = {
+        userId: user.id,
+        role: user.role as Role,
+        email: user.email,
+      };
 
       //Access Token Verification
       const accessToken = cookeiUtils.getCookie(req, "accessToken");
@@ -128,6 +124,9 @@ export const checkAuth =
           "Forbidden access! You do not have permission to access this resource.",
         );
       }
+
+      // console.log("REQ.USER BEFORE NEXT:", req.user);
+      // console.log("VERIFIED TOKEN:", verifiedToken.data);
 
       next();
     } catch (error: any) {

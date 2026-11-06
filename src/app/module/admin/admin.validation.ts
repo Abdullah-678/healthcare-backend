@@ -13,3 +13,13 @@ export const updateAdminZodSchema = z.object({
     })
     .optional(),
 });
+
+export const createAdminZodSchema = z.object({
+  password: z.string().min(8, "Password must be at least 8 characters"),
+  admin: z.object({
+    name: z.string().min(1, "Name is required"),
+    email: z.email("Invalid email address"),
+    profilePhoto: z.url("Profile photo must be a valid URL").optional(),
+    contactNumber: z.string().optional(),
+  }),
+});

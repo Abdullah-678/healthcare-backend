@@ -50,6 +50,33 @@ const getMyDoctorSchedules = async (user: IRequestUser) => {
     where: {
       doctorId: doctorData.id,
     },
+    include: {
+      schedule: true,
+    },
+  });
+
+  return doctorSchedules;
+};
+
+const getAvailableDoctorSchedules = async (doctorId: string) => {
+  const doctorSchedules = await prisma.doctorSchedules.findMany({
+    where: {
+      doctorId,
+      isBooked: false,
+      schedule: {
+        startDateTime: {
+          gte: new Date(),
+        },
+      },
+    },
+    include: {
+      schedule: true,
+    },
+    orderBy: {
+      schedule: {
+        startDateTime: "asc",
+      },
+    },
   });
 
   return doctorSchedules;
@@ -144,4 +171,5 @@ export const DoctorScheduleService = {
   updateMyDoctorSchedule,
   deleteMyDoctorSchedule,
   getMyDoctorSchedules,
+  getAvailableDoctorSchedules,
 };

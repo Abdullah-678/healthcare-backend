@@ -8,7 +8,7 @@ export const validateRequest = (ZodSchema: z.ZodObject) => {
     }
     const parseResult = ZodSchema.safeParse(req.body);
     if (!parseResult.success) {
-      next(parseResult.error);
+      return next(parseResult.error);
     }
     req.body = parseResult.data;
     next();

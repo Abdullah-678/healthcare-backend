@@ -5,6 +5,17 @@ import { sendResponse } from "../../shared/sendResponse";
 import { AdminService } from "./admin.service";
 import { AppError } from "../../errorHelpers/appError";
 
+const createAdmin = catchAsync(async (req: Request, res: Response) => {
+  const result = await AdminService.createAdmin(req.body);
+
+  sendResponse(res, {
+    htttpStatusCode: status.CREATED,
+    success: true,
+    message: "Admin created successfully",
+    data: result,
+  });
+});
+
 const getAllAdmins = catchAsync(async (req: Request, res: Response) => {
   const result = await AdminService.getAllAdmins();
 
@@ -65,6 +76,7 @@ const deleteAdmin = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const AdminController = {
+  createAdmin,
   getAllAdmins,
   updateAdmin,
   deleteAdmin,
