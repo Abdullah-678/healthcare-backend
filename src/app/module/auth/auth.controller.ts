@@ -8,6 +8,7 @@ import { AppError } from "../../errorHelpers/appError";
 import { email } from "zod";
 import { envVars } from "../../../config/env";
 import { auth } from "../../lib/auth";
+import jwt from "jsonwebtoken";
 
 const registerPatient = catchAsync(async (req: Request, res: Response) => {
   const payload = req.body;
@@ -166,7 +167,9 @@ const googleLogin = catchAsync((req: Request, res: Response) => {
 });
 const googleLoginSuccess = catchAsync(async (req: Request, res: Response) => {
   const redirectPath = (req.query.redirect as string) || "/dashboard";
-  const sessionToken = req.cookies["better-auth.session_token"];
+  const sessionToken =
+    req.cookies["__Secure-better-auth.session_token"] ??
+    req.cookies["better-auth.session_token"];
   if (!sessionToken) {
     return res.redirect(`${envVars.FRONTEND_URL}/login?error=oauth_failed`);
   }
@@ -186,13 +189,35 @@ const googleLoginSuccess = catchAsync(async (req: Request, res: Response) => {
 
   const result = await authServices.googleLoginSuccess(session);
   const { accessToken, refreshToken } = result;
-  tokenUtils.setAccessTokenCookie(res, accessToken);
-  tokenUtils.setRefreshToken(res, refreshToken);
+  const handoffTicket = jwt.sign(
+    {
+      accessToken,
+      refreshToken,
+      sessionToken,
+      redirectPath,
+      handoffOrigin: new URL(envVars.BETTER_AUTH_URL).origin,
+    },
+    envVars.ACCESS_TOKEN_SECRET,
+    {
+      algorithm: "HS256",
+      audience: "healthcare-frontend-google-auth",
+      expiresIn: "60s",
+      issuer: "healthcare-backend",
+    },
+  );
+  const frontendCallbackUrl = new URL(
+    "/api/auth/google/callback",
+    envVars.FRONTEND_URL,
+  ).toString();
 
-  const isValidRedirectPath =
-    redirectPath.startsWith("/") && !redirectPath.startsWith("//");
-  const finalRedirectPath = isValidRedirectPath ? redirectPath : "/dashboard";
-  res.redirect(`${envVars.FRONTEND_URL}${finalRedirectPath}`);
+  res.set({
+    "Cache-Control": "no-store",
+    "Referrer-Policy": "no-referrer",
+  });
+  res.render("googleAuthHandoff", {
+    frontendCallbackUrl,
+    handoffTicket,
+  });
 });
 const handleOAuthError = catchAsync((req: Request, res: Response) => {
   const error = (req.query.error as string) || "oauth_failed";

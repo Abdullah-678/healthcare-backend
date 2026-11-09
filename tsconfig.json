@@ -12,6 +12,6 @@
     "types": ["node"],
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*","prisma7.config.ts"],
+  "include": ["api/**/*", "src/**/*", "prisma7.config.ts"],
   "exclude": ["node_modules","dist","generated/prisma"]
 }

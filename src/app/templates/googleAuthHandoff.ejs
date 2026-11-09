@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="referrer" content="no-referrer" />
+    <title>Signing in</title>
+  </head>
+  <body>
+    <p>Signing you in...</p>
+    <form
+      id="google-auth-handoff"
+      method="post"
+      action="<%= frontendCallbackUrl %>"
+    >
+      <input type="hidden" name="ticket" value="<%= handoffTicket %>" />
+      <noscript><button type="submit">Continue</button></noscript>
+    </form>
+    <script>
+      document.getElementById("google-auth-handoff").submit();
+    </script>
+  </body>
+</html>
